@@ -17,37 +17,95 @@
 <body>
 <script>
 	// Variaveis do jogo
-	// Canvas: usada para desenhar
-	// Contexto: associado ao canvas
-	// Altura e largura: usada para pegar o tamanho da janela do jogador
-	// Frames: controlar a taxa em que roda o jogo
-	var canvas, contexto, ALTURA, LARGURA, frames = 0;
+	var canvas, 
+		contextoDaCanvas, // Canvas: usada para desenhar
+		alturaDaCanvas, // Contexto: associado ao canvas
+		larguraDaCanvas, // Altura e largura: usada para pegar o tamanho da janela do jogador
+		framesDaCanvas = 0, // Frames: controlar a taxa em que roda o jogo
+		maxPulosDoPersonagem = 3, // Limite de pulos do personagem
+
+	// Objeto chao
+	chaoDoJogo = {
+		y: 550, // Coordenada y
+		alturaDoChao: 50,
+		corDoChao: "#e8da78",
+
+		// Metodo desenha o chao do jogo
+		desenhaChao: function() {
+			// Pinta o fundo do chao de amarelo
+			contextoDaCanvas.fillStyle = this.corDoChao;
+			// contexto.fillRect(coordenada x, coordenada y, largura, altura)
+			contextoDaCanvas.fillRect(0, this.y, larguraDaCanvas, this.alturaDoChao);
+		}
+	},
+
+	// Objeto personagem
+	personagemDoJogo = {
+		x: 50, // Coordenada x: o personagem fica a uma distancia de 50px da borda esquerda da canvas
+		y: 0,
+		alturaDoPersonagem: 50,
+		larguraDoPersonagem: 50,
+		corDoPersonagem: "#ff9239",
+		gravidadeDoPersonagem: 1.6, // A gravidade e constante
+		velocidadeDoPersonagem: 0,
+		forcaDoPulo: 23.6, // Forca com que o personagem pula
+		qdtPulosDoPersonagem: 0, // Conta quantos pulos o personagem deu
+
+		// Metodo atualiza a posicao do personagem do jogo
+		atualizaPersonagem: function() {
+			this.velocidadeDoPersonagem += this.gravidadeDoPersonagem;
+			this.y += this.velocidadeDoPersonagem;
+
+			// Fixando o personagem no chao do jogo
+			if (this.y > chaoDoJogo.y - this.alturaDoPersonagem) {
+				this.y = chaoDoJogo.y - this.alturaDoPersonagem;
+				// Quando o personagem cair no chao ele pode pular mais tres vezes
+				this.qdtPulosDoPersonagem = 0;
+			}
+		},
+		// Metodo faz pular o personagem do jogo
+		pulaPersonagem: function() {
+			// Personagem pular consecutivamente somente tres vezes
+			if (this.qdtPulosDoPersonagem < maxPulosDoPersonagem) {
+				this.velocidadeDoPersonagem = -this.forcaDoPulo;
+				this.qdtPulosDoPersonagem++;
+			}
+		},
+
+		// Metodo desenha os blocos do jogo
+		desenhaPersonagem: function() {
+			contextoDaCanvas.fillStyle = this.corDoPersonagem;
+			contextoDaCanvas.fillRect(this.x, this.y, this.larguraDoPersonagem, this.alturaDoPersonagem);
+		}
+	}
+	;
 
 	// Funcao identifica se o jogador clicou
 	function clique(event) {
-		alert("Clicou!");
+		personagemDoJogo.pulaPersonagem();
 	}	 
 
 	// Funcao principal
 	function main() {
 		//Pegar o tamanho da janela do jogador
-		ALTURA = window.innerHeight;
-		LARGURA = window.innerWidth;
+		alturaDaCanvas = window.innerHeight;
+		larguraDaCanvas = window.innerWidth;
 
-		if(LARGURA >= 500) {
-			LARGURA = 600;
-			ALTURA  = 600;
+		// Verifica se a janela do jogador e maior ou igual a 500 pixel
+		if (larguraDaCanvas >= 500) {
+			larguraDaCanvas = 600;
+			alturaDaCanvas  = 600;
 		}
 
 		// Criando no script um elemento do tipo canvas
 		canvas = document.createElement("canvas");
 		// Elementos padrao da canvas
-		canvas.width = LARGURA;
-		canvas.height = ALTURA;
+		canvas.width = larguraDaCanvas;
+		canvas.height = alturaDaCanvas;
 		canvas.style.border = "1px solid #000";
 
 		// Definindo o contexto para desenhar elementos em 2D
-		contexto = canvas.getContext("2d");
+		contextoDaCanvas = canvas.getContext("2d");
 
 		// Adicionando a canvas no HTML
 		document.body.appendChild(canvas);
@@ -70,14 +128,20 @@
 
 	// Funcao atualiza o status do personagem, dos blocos
 	function atualiza() {
-		frames++;
+		framesDaCanvas++;
+		personagemDoJogo.atualizaPersonagem();
 	}
 	
 	// Funcao desenha o personagem, os blocos, o chao
 	function desenha() {
-		// Pinta o fundo da canvas
-		contexto.fillStyle = "#50beff";
-		contexto.fillRect(0, 0, LARGURA, ALTURA);
+		// Pinta o fundo da canvas na cor azul
+		contextoDaCanvas.fillStyle = "#80daff";
+		// contexto.fillRect(coordenada x, coordenada y, largura, altura)
+		contextoDaCanvas.fillRect(0, 0, larguraDaCanvas, alturaDaCanvas);
+		// Desenha o chao do jogo
+		chaoDoJogo.desenhaChao();
+		// Desenha o bloco do jogo
+		personagemDoJogo.desenhaPersonagem();
 	}
 	
 	// Inicializa o jogo
