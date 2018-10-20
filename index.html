@@ -58,6 +58,7 @@
 		velocidadeDoPersonagem: 0,
 		forcaDoPulo: 23.6, // Forca com que o personagem pula
 		qdtPulosDoPersonagem: 0, // Conta quantos pulos o personagem deu
+		scoreDoJogo: 0,
 		// Metodo atualiza a posicao do personagem do jogo
 		atualizaPersonagem: function() {
 			this.velocidadeDoPersonagem += this.gravidadeDoPersonagem;
@@ -79,6 +80,12 @@
 				this.qdtPulosDoPersonagem++;
 			}
 		},
+
+		resetPersonagem: function() {
+			this.velocidadeDoPersonagem = 0;
+			this.y = 0; // Posiciona o personagem no topo do jogo
+			this.scoreDoJogo = 0; // Quando perder zera o score do jogo
+		},
 		// Metodo desenha os blocos do jogo
 		desenhaPersonagem: function() {
 			contextoDaCanvas.fillStyle = this.corDoPersonagem;
@@ -96,7 +103,9 @@
 		insereObstaculo: function() {
 			this.blocosDoJogo.push({
 				x: larguraDaCanvas, // Posiciona o bloco no lado direito da canvas
-				larguraDoBloco: 30 + Math.floor(21 * Math.random()), // Cria uma largura aleatoria para o bloco
+				
+				//larguraDoBloco: 30 + Math.floor(21 * Math.random()), Cria uma largura aleatoria para o bloco
+				larguraDoBloco: 50, // Fixa a largura do bloco para 50 pixels
 				alturaDoBloco: 30 + Math.floor(120 * Math.random()), // Cria uma altura aleatoria para o bloco
 				corDoBloco: this.coresDoBloco[Math.floor(5 * Math.random())] // Escolhe uma cor aleatoria do array coresDoBloco para um bloco
 			});
@@ -122,6 +131,8 @@
 					personagemDoJogo.x + personagemDoJogo.larguraDoPersonagem >= obstaculo.x &&
 					personagemDoJogo.y + personagemDoJogo.alturaDoPersonagem >= chaoDoJogo.y - obstaculo.alturaDoBloco) {
 					estadoAtualDoJogo = estadoDoJogo.perdeu;
+				} else if (obstaculo.x == 0) {
+					personagemDoJogo.scoreDoJogo++; // Incrementa o score do jogo
 				} else if (obstaculo.x <= -obstaculo.larguraDoBloco) {
 					this.blocosDoJogo.splice(i, 1); // Remover um obstaculo
 					tam--;
@@ -154,8 +165,8 @@
 			estadoAtualDoJogo = estadoDoJogo.jogando; // Se o estado atual do jogo for jogar altera o estado atual para jogando
 		} else if (estadoAtualDoJogo == estadoDoJogo.perdeu && personagemDoJogo.y >= 2 * alturaDaCanvas) {
 			estadoAtualDoJogo = estadoDoJogo.jogar; // Se o estado atual do jogo for perdeu altera o estado atual para jogar
-			personagemDoJogo.velocidadeDoPersonagem = 0;
-			personagemDoJogo.y = 0; // Posiciona o personagem no topo do jogo
+			obstaculosDoJogo.limpaObstaculos(); // Se o estado atual for perdeu limpa os blocos da tela
+			personagemDoJogo.resetPersonagem();
 		}
 	}	 
 
@@ -210,8 +221,6 @@
 		
 		if (estadoAtualDoJogo == estadoDoJogo.jogando) {
 			obstaculosDoJogo.atualizaObstaculo(); // Se o estado atual for jogando os blocos ficarao passando na tela
-		} else if (estadoAtualDoJogo == estadoDoJogo.perdeu) {
-			obstaculosDoJogo.limpaObstaculos(); // Se o estado atual for perdeu limpa os blocos da tela
 		}
 	}
 	
@@ -222,6 +231,10 @@
 		// contexto.fillRect(coordenada x, coordenada y, largura, altura)
 		contextoDaCanvas.fillRect(0, 0, larguraDaCanvas, alturaDaCanvas);
 
+		// Desenhando o score do jogo
+		contextoDaCanvas.fillStyle = "#ffffff"; // Cor branca
+		contextoDaCanvas.font = "50px Arial"; // Tamanho de 50 pixels e arial
+		contextoDaCanvas.fillText(personagemDoJogo.scoreDoJogo, 30, 68);
 
 		if (estadoAtualDoJogo == estadoDoJogo.jogar) {
 			contextoDaCanvas.fillStyle = "green";
@@ -229,6 +242,21 @@
 		} else if (estadoAtualDoJogo == estadoDoJogo.perdeu) {
 			contextoDaCanvas.fillStyle = "red";
 			contextoDaCanvas.fillRect(larguraDaCanvas / 2 - 50, alturaDaCanvas / 2 - 50, 100, 100);
+			contextoDaCanvas.save(); // Salva o contexto
+			contextoDaCanvas.translate(larguraDaCanvas / 2, alturaDaCanvas / 2); // Tranlada para o meio da canvas
+			contextoDaCanvas.fillStyle = "#ffffff";
+			
+			if (personagemDoJogo.scoreDoJogo < 10) {
+				contextoDaCanvas.fillText(personagemDoJogo.scoreDoJogo, -13, 19); // Centraliza o score com valor menor que 10
+			} else if (personagemDoJogo.scoreDoJogo >= 10 && personagemDoJogo.scoreDoJogo < 100) {
+				contextoDaCanvas.fillText(personagemDoJogo.scoreDoJogo, -26, 19); // Centraliza o score com valor maior ou igual a 10 e menor que 100
+			} else if (personagemDoJogo.scoreDoJogo >= 100 && personagemDoJogo.scoreDoJogo < 1000) {
+				contextoDaCanvas.fillText(personagemDoJogo.scoreDoJogo, -39, 19); // Centraliza o score com valor maior ou igual a 100 e menor que 1000
+			} else {
+				contextoDaCanvas.fillText(personagemDoJogo.scoreDoJogo, -59, 19); // Centraliza o score com valor maior ou igual a 1000
+			}
+
+			contextoDaCanvas.restore();
 		} else if (estadoAtualDoJogo == estadoDoJogo.jogando) {
 			// Desenha o obstaculo do jogo
 			obstaculosDoJogo.desenhaObstaculo();
