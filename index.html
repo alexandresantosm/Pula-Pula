@@ -24,6 +24,14 @@
 		framesDaCanvas = 0, // Frames: controlar a taxa em que roda o jogo
 		maxPulosDoPersonagem = 3, // Limite de pulos do personagem
 		velocidadeDoBloco = 6, // Velocidade do bloco no jogo
+		estadoAtualDoJogo, // Carrega o estado atual do jogo
+
+		// Objeto estados: um analogo a um ENUM
+		estadoDoJogo = {
+			jogar: 0,
+			jogando: 1,
+			perdeu: 2,
+		},
 
 	// Objeto chao
 	chaoDoJogo = {
@@ -56,10 +64,11 @@
 			this.y += this.velocidadeDoPersonagem;
 
 			// Fixando o personagem no chao do jogo
-			if (this.y > chaoDoJogo.y - this.alturaDoPersonagem) {
+			if (this.y > chaoDoJogo.y - this.alturaDoPersonagem && estadoAtualDoJogo != estadoDoJogo.perdeu) {
 				this.y = chaoDoJogo.y - this.alturaDoPersonagem;
 				// Quando o personagem cair no chao ele pode pular mais tres vezes
 				this.qdtPulosDoPersonagem = 0;
+				this.velocidadeDoPersonagem = 0;
 			}
 		},
 		// Metodo faz pular o personagem do jogo
@@ -76,6 +85,7 @@
 			contextoDaCanvas.fillRect(this.x, this.y, this.larguraDoPersonagem, this.alturaDoPersonagem);
 		}
 	},
+	
 	// Objeto Obstaculo
 	obstaculosDoJogo = {
 		blocosDoJogo: [], // Array de obstaculos do tipo bloco
@@ -107,20 +117,28 @@
 				var obstaculo = this.blocosDoJogo[i];
 				// Decrementando o x de cada bloco
 				obstaculo.x -= velocidadeDoBloco;
-				// Remover um obstaculo
-				if (obstaculo.x <= -obstaculo.larguraDoBloco) {
-					this.blocosDoJogo.splice(i, 1);
+
+				if (personagemDoJogo.x < obstaculo.x + obstaculo.larguraDoBloco &&
+					personagemDoJogo.x + personagemDoJogo.larguraDoPersonagem >= obstaculo.x &&
+					personagemDoJogo.y + personagemDoJogo.alturaDoPersonagem >= chaoDoJogo.y - obstaculo.alturaDoBloco) {
+					estadoAtualDoJogo = estadoDoJogo.perdeu;
+				} else if (obstaculo.x <= -obstaculo.larguraDoBloco) {
+					this.blocosDoJogo.splice(i, 1); // Remover um obstaculo
 					tam--;
 					i--;
 				}
 			}
+		},
+
+		limpaObstaculos: function() {
+			this.blocosDoJogo = []; // Limpa o array de blocos do jogo
 		},
 		
 		// Metodo desenha o obstaculo do jogo
 		desenhaObstaculo: function() {
 			// Varre o array de blocos do jogo
 			for (var i = 0, tam = this.blocosDoJogo.length; i < tam; i++) {
-				var obstaculo = this.blocosDoJogo[i]; // obstaculo recebe um bloco
+				var obstaculo = this.blocosDoJogo[i]; // A variavel obstaculo recebe um bloco
 				contextoDaCanvas.fillStyle = obstaculo.corDoBloco; // Setando a cor do bloco
 				contextoDaCanvas.fillRect(obstaculo.x, chaoDoJogo.y - obstaculo.alturaDoBloco, obstaculo.larguraDoBloco, obstaculo.alturaDoBloco); // Setando a posicao do bloco
 			}
@@ -129,7 +147,16 @@
 
 	// Funcao identifica se o jogador clicou
 	function clique(event) {
-		personagemDoJogo.pulaPersonagem();
+
+		if (estadoAtualDoJogo == estadoDoJogo.jogando) {
+			personagemDoJogo.pulaPersonagem(); // Se o estado atual do jogo for jogando o personagem pula
+		} else if (estadoAtualDoJogo == estadoDoJogo.jogar) {
+			estadoAtualDoJogo = estadoDoJogo.jogando; // Se o estado atual do jogo for jogar altera o estado atual para jogando
+		} else if (estadoAtualDoJogo == estadoDoJogo.perdeu && personagemDoJogo.y >= 2 * alturaDaCanvas) {
+			estadoAtualDoJogo = estadoDoJogo.jogar; // Se o estado atual do jogo for perdeu altera o estado atual para jogar
+			personagemDoJogo.velocidadeDoPersonagem = 0;
+			personagemDoJogo.y = 0; // Posiciona o personagem no topo do jogo
+		}
 	}	 
 
 	// Funcao principal
@@ -160,6 +187,9 @@
 		// Verificar se o jogador clicou
 		document.addEventListener("mousedown", clique); 
 
+		// Setando o estado do jogo
+		estadoAtualDoJogo = estadoDoJogo.jogar;
+
 		// A funcao roda ficara em loop 	
 		roda();
 	}
@@ -177,7 +207,12 @@
 	function atualiza() {
 		framesDaCanvas++;
 		personagemDoJogo.atualizaPersonagem();
-		obstaculosDoJogo.atualizaObstaculo();
+		
+		if (estadoAtualDoJogo == estadoDoJogo.jogando) {
+			obstaculosDoJogo.atualizaObstaculo(); // Se o estado atual for jogando os blocos ficarao passando na tela
+		} else if (estadoAtualDoJogo == estadoDoJogo.perdeu) {
+			obstaculosDoJogo.limpaObstaculos(); // Se o estado atual for perdeu limpa os blocos da tela
+		}
 	}
 	
 	// Funcao desenha o personagem, os blocos, o chao
@@ -186,10 +221,21 @@
 		contextoDaCanvas.fillStyle = "#80daff";
 		// contexto.fillRect(coordenada x, coordenada y, largura, altura)
 		contextoDaCanvas.fillRect(0, 0, larguraDaCanvas, alturaDaCanvas);
+
+
+		if (estadoAtualDoJogo == estadoDoJogo.jogar) {
+			contextoDaCanvas.fillStyle = "green";
+			contextoDaCanvas.fillRect(larguraDaCanvas / 2 - 50, alturaDaCanvas / 2 - 50, 100, 100);
+		} else if (estadoAtualDoJogo == estadoDoJogo.perdeu) {
+			contextoDaCanvas.fillStyle = "red";
+			contextoDaCanvas.fillRect(larguraDaCanvas / 2 - 50, alturaDaCanvas / 2 - 50, 100, 100);
+		} else if (estadoAtualDoJogo == estadoDoJogo.jogando) {
+			// Desenha o obstaculo do jogo
+			obstaculosDoJogo.desenhaObstaculo();
+		}
+		
 		// Desenha o chao do jogo
 		chaoDoJogo.desenhaChao();
-		// Desenha o obstaculo do jogo
-		obstaculosDoJogo.desenhaObstaculo();
 		// Desenha o bloco do jogo
 		personagemDoJogo.desenhaPersonagem();
 	}
