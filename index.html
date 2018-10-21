@@ -23,10 +23,38 @@
 		alturaDaCanvas, // Contexto: associado ao canvas
 		larguraDaCanvas, // Altura e largura: usada para pegar o tamanho da janela do jogador
 		maxPulosDoPersonagem = 3, // Limite de pulos do personagem
-		velocidadeDoBloco = 6, // Velocidade do bloco no jogo
+		velocidadeDoJogo = 6, // Velocidade do bloco no jogo
 		estadoAtualDoJogo, // Carrega o estado atual do jogo
 		recordDoJogo, // Salva o record do jogo
 		img,
+		pontosParaNovaFase = [5, 10, 15], // Carrega a pontuacao
+		faseAtual = 0, //  Variavel que vai indexar o vetor pontosParaNovaFase
+
+		// Objeto nova fase
+		labelNovaFase = {
+			texto: "",
+			opacidade: 0.0,
+			
+			fadeIn: function(dt) {
+				var fadeInId = setInterval(function() {
+					if (labelNovaFase.opacidade < 1.0) {
+						labelNovaFase.opacidade += 0.01;
+					} else {
+						clearInterval(fadeInId);
+					}
+				}, 10 * dt);
+			},
+
+			fadeOut: function(dt) {
+				var fadeOutId = setInterval(function() {
+					if (labelNovaFase.opacidade > 0.0) {
+						labelNovaFase.opacidade -= 0.01;
+					}  else {
+						clearInterval(fadeOutId);
+					}
+				}, 10 * dt);
+			},
+		},
 
 		// Objeto estados: um analogo a um ENUM
 		estadoDoJogo = {
@@ -42,10 +70,10 @@
 		alturaDoChao: 50,
 
 		atualizaChao: function() {
-			this.x -= velocidadeDoBloco;
+			this.x -= velocidadeDoJogo;
 
 			if (this.x <= -30) {
-				this.x = 0;
+				this.x += 30;
 			}
 		},
 
@@ -68,11 +96,14 @@
 		qdtPulosDoPersonagem: 0, // Conta quantos pulos o personagem deu
 		scoreDoJogo: 0,
 		rotacaoDoPersonagem: 0,
+		vidasDoPersonagem: 3,
+		colisãoDoPersonagem: false,
+
 		// Metodo atualiza a posicao do personagem do jogo
 		atualizaPersonagem: function() {
 			this.velocidadeDoPersonagem += this.gravidadeDoPersonagem;
 			this.y += this.velocidadeDoPersonagem;
-			this.rotacaoDoPersonagem += Math.PI / 180 * velocidadeDoBloco; // Rotacionando o personagem no sentido antihorario
+			this.rotacaoDoPersonagem += Math.PI / 180 * velocidadeDoJogo; // Rotacionando o personagem no sentido antihorario
 
 			// Fixando o personagem no chao do jogo
 			if (this.y > chaoDoJogo.y - this.alturaDoPersonagem && estadoAtualDoJogo != estadoDoJogo.perdeu) {
@@ -99,8 +130,11 @@
 				localStorage.setItem("recordDoJogo", this.scoreDoJogo); // Guarda o novo record
 				recordDoJogo = this.scoreDoJogo;
 			}
-
+			this.vidasDoPersonagem = 3; // Retorna a quantidade de vidas do personagem para 3
 			this.scoreDoJogo = 0; // Quando perder zera o score do jogo
+
+			velocidadeDoJogo = 6;
+			faseAtual = 0;
 		},
 		// Metodo desenha os blocos do jogo
 		desenhaPersonagem: function() {
@@ -115,18 +149,19 @@
 	// Objeto Obstaculo
 	obstaculosDoJogo = {
 		blocosDoJogo: [], // Array de obstaculos do tipo bloco
-		coresDoBloco: ["#ffbc1c", "#ff1c1c", "#ff85e1", "#52a7ff", "#78ff5d"], // Array de cores para os blocos
+		spritesBloco: [pontosPretosObstacle, terraObstacle, aguaObstacle, madeiraObstacle, vidroObstacle], // Array de imagens para os blocos
 		tempoInsereBloco: 0,
+		scoredDoJogo: false,
 
 		// Metodo insere um obstaculo no jogo
 		insereObstaculo: function() {
 			this.blocosDoJogo.push({
 				x: larguraDaCanvas, // Posiciona o bloco no lado direito da canvas
-				
+				y: chaoDoJogo.y - Math.floor(20 + Math.random() * 100),
 				//larguraDoBloco: 30 + Math.floor(21 * Math.random()), Cria uma largura aleatoria para o bloco
 				larguraDoBloco: 50, // Fixa a largura do bloco para 50 pixels
-				alturaDoBloco: 30 + Math.floor(120 * Math.random()), // Cria uma altura aleatoria para o bloco
-				corDoBloco: this.coresDoBloco[Math.floor(5 * Math.random())] // Escolhe uma cor aleatoria do array coresDoBloco para um bloco
+				// alturaDoBloco: 30 + Math.floor(120 * Math.random()), // Cria uma altura aleatoria para o bloco
+				spriteBloco: this.spritesBloco[Math.floor(this.spritesBloco.length * Math.random())] // Escolhe uma cor aleatoria do array coresDoBloco para um bloco
 			});
 
 			this.tempoInsereBloco = 30 + Math.floor(20 * Math.random());
@@ -144,14 +179,26 @@
 			for (var i = 0, tam = this.blocosDoJogo.length; i < tam; i++) {
 				var obstaculo = this.blocosDoJogo[i];
 				// Decrementando o x de cada bloco
-				obstaculo.x -= velocidadeDoBloco;
+				obstaculo.x -= velocidadeDoJogo;
 
-				if (personagemDoJogo.x < obstaculo.x + obstaculo.larguraDoBloco &&
+				if (!personagemDoJogo.colisãoDoPersonagem && personagemDoJogo.x < obstaculo.x + obstaculo.larguraDoBloco &&
 					personagemDoJogo.x + personagemDoJogo.larguraDoPersonagem >= obstaculo.x &&
-					personagemDoJogo.y + personagemDoJogo.alturaDoPersonagem >= chaoDoJogo.y - obstaculo.alturaDoBloco) {
-					estadoAtualDoJogo = estadoDoJogo.perdeu;
-				} else if (obstaculo.x == 0) {
+					personagemDoJogo.y + personagemDoJogo.alturaDoPersonagem >= obstaculo.y) {
+					personagemDoJogo.colisãoDoPersonagem = true;
+					setTimeout(function() {
+						personagemDoJogo.colisãoDoPersonagem = false;
+					}, 500);
+					if(personagemDoJogo.vidasDoPersonagem >= 1) {
+						personagemDoJogo.vidasDoPersonagem--; // Decrementando a vida do personagem
+					} else {
+						estadoAtualDoJogo = estadoDoJogo.perdeu;
+					}
+				} else if (obstaculo.x == 0 && !obstaculo.scoredDoJogo) {
 					personagemDoJogo.scoreDoJogo++; // Incrementa o score do jogo
+					obstaculo.scoredDoJogo = true;
+					if (faseAtual < pontosParaNovaFase.length && personagemDoJogo.scoreDoJogo == pontosParaNovaFase[faseAtual]) {
+						passarDeFase();
+					}
 				} else if (obstaculo.x <= -obstaculo.larguraDoBloco) {
 					this.blocosDoJogo.splice(i, 1); // Remover um obstaculo
 					tam--;
@@ -169,8 +216,7 @@
 			// Varre o array de blocos do jogo
 			for (var i = 0, tam = this.blocosDoJogo.length; i < tam; i++) {
 				var obstaculo = this.blocosDoJogo[i]; // A variavel obstaculo recebe um bloco
-				contextoDaCanvas.fillStyle = obstaculo.corDoBloco; // Setando a cor do bloco
-				contextoDaCanvas.fillRect(obstaculo.x, chaoDoJogo.y - obstaculo.alturaDoBloco, obstaculo.larguraDoBloco, obstaculo.alturaDoBloco); // Setando a posicao do bloco
+				obstaculo.spriteBloco.desenha(obstaculo.x, obstaculo.y);
 			}
 		}
 	};
@@ -188,6 +234,23 @@
 			personagemDoJogo.resetPersonagem();
 		}
 	}	 
+
+	function passarDeFase() {
+		velocidadeDoJogo++;
+		faseAtual++;
+		personagemDoJogo.vidasDoPersonagem++;
+
+		if (faseAtual == 4) {
+			personagemDoJogo.gravidadeDoPersonagem += 0.6;
+		}
+
+		labelNovaFase.texto = "Level " + faseAtual;
+		labelNovaFase.fadeIn(0.4);
+
+		setTimeout(function() {
+			labelNovaFase.fadeOut(0.4);
+		}, 800);
+	}
 
 	// Funcao principal
 	function main() {
@@ -245,12 +308,12 @@
 
 	// Funcao atualiza o status do personagem, dos blocos
 	function atualiza() {
-		personagemDoJogo.atualizaPersonagem();
-		chaoDoJogo.atualizaChao();
 		
 		if (estadoAtualDoJogo == estadoDoJogo.jogando) {
 			obstaculosDoJogo.atualizaObstaculo(); // Se o estado atual for jogando os blocos ficarao passando na tela
 		}
+		chaoDoJogo.atualizaChao();
+		personagemDoJogo.atualizaPersonagem();
 	}
 	
 	// Funcao desenha o personagem, os blocos, o chao
@@ -260,7 +323,11 @@
 		// Desenhando o score do jogo
 		contextoDaCanvas.fillStyle = "#ffffff"; // Cor branca
 		contextoDaCanvas.font = "100px Arial"; // Tamanho de 50 pixels e arial
-		contextoDaCanvas.fillText(personagemDoJogo.scoreDoJogo, 30, 68);
+		contextoDaCanvas.fillText(personagemDoJogo.scoreDoJogo, 30, 85);
+		contextoDaCanvas.fillText(personagemDoJogo.vidasDoPersonagem, 510, 85);
+		
+		contextoDaCanvas.fillStyle = "rgba(0, 0, 0, "+ labelNovaFase.opacidade +")";
+		contextoDaCanvas.fillText(labelNovaFase.texto, canvas.width / 2 - 150, canvas.height / 3);
 
 		if (estadoAtualDoJogo == estadoDoJogo.jogando) {
 			// Desenha o obstaculo do jogo
